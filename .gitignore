@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Chatty/Chatty.db
+/Chatty/Chatty.db-shm
+/Chatty/Chatty.db-wal
