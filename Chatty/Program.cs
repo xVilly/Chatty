@@ -2,6 +2,7 @@ using Chatty.Hubs;
 using Chatty.Filters;
 using Microsoft.AspNetCore.SignalR;
 using Chatty.Data;
+using Chatty.Services;
 
 namespace Chatty
 {
@@ -13,6 +14,7 @@ namespace Chatty
 
             // Add services to the container.
             builder.Services.AddSqlite<ChatContext>("Data Source=Chatty.db");
+            builder.Services.AddScoped<UserService>();
             builder.Services.AddSignalR(hubOptions =>
             {
                 hubOptions.AddFilter<AuthorizationFilter>();
@@ -21,6 +23,7 @@ namespace Chatty
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
 
@@ -28,6 +31,12 @@ namespace Chatty
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
+
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
 
 
             app.MapControllers();
