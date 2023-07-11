@@ -1,9 +1,11 @@
 ﻿using Chatty.Filters;
 using Chatty.Models;
+using Chatty.Services;
 using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Channels;
+using System.Xml.Linq;
 
 namespace Chatty.Hubs
 {
@@ -17,14 +19,15 @@ namespace Chatty.Hubs
         private readonly static Dictionary<string, List<string>> _channelConnections =
             new Dictionary<string, List<string>>();
 
-
-        public ChatHub()
+        private readonly UserService _userService;
+        public ChatHub(UserService userService)
         {
+            _userService = userService;
         }
 
         public override async Task OnConnectedAsync()
         {
-            await Clients.Client(Context.ConnectionId).SendAsync("Status", -1, "Welcome! Please identify using your user token.");
+            await Clients.Client(Context.ConnectionId).SendAsync("Status", -1, "Welcome! Please identify using your name and password.");
             Console.WriteLine($"Client {Context.ConnectionId} has connected.");
             await base.OnConnectedAsync();
         }
@@ -54,29 +57,41 @@ namespace Chatty.Hubs
             Console.WriteLine($"Client {Context.ConnectionId} has disconnected. (user: {userName})");
         }
 
-        public async Task Identify(string token)
+        public async Task Identify(string? name, string? password)
         {
-            User? user = null; // ex
+            if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(password))
+            {
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Name and Password (2) arguments required.");
+                return;
+            }
+            User? user = _userService.GetByName(name);
             if (user == null)
-                await Clients.Client(Context.ConnectionId).SendAsync("Status", 1, "Invalid token.");
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 1, "User not found.");
+            else if (user.Password != password)
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 1, "Wrong password.");
             else {
-                if (_connections.ContainsKey(token))
-                    _connections[token].Add(Context.ConnectionId);
+                if (_connections.ContainsKey(user.Name))
+                    _connections[user.Name].Add(Context.ConnectionId);
                 else
-                    _connections.Add(token, new List<string> { Context.ConnectionId });
+                    _connections.Add(user.Name, new List<string> { Context.ConnectionId });
                 await Clients.Client(Context.ConnectionId).SendAsync("Status", -1, $"Successfully identified as {user.Name}.");
                 Console.WriteLine($"User '{user.Name}' has identified (CID:{Context.ConnectionId}).");
             }
         }
 
-        public async Task JoinChannel(string channelName)
+        public async Task JoinChannel(string? channelName)
         {
+            if (String.IsNullOrEmpty(channelName))
+            {
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name (1) argument required.");
+                return;
+            }
             User? u = null;
             foreach (var user in _connections)
             {
                 if (user.Value.Contains(Context.ConnectionId))
                 {
-                    u = null; // ex
+                    u = _userService.GetByName(user.Key);
                     break;
                 }
             }
@@ -94,14 +109,19 @@ namespace Chatty.Hubs
             await Clients.Group(channelName).SendAsync("ReceiveBroadcast", $"[!] {u.Name} has joined the channel.");
         }
 
-        public async Task LeaveChannel(string channelName)
+        public async Task LeaveChannel(string? channelName)
         {
+            if (String.IsNullOrEmpty(channelName))
+            {
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name (1) argument required.");
+                return;
+            }
             User? u = null;
             foreach (var user in _connections)
             {
                 if (user.Value.Contains(Context.ConnectionId))
                 {
-                    u = null; // ex
+                    u = _userService.GetByName(user.Key);
                     break;
                 }
             }
@@ -117,13 +137,18 @@ namespace Chatty.Hubs
             await Clients.Client(Context.ConnectionId).SendAsync("ReceiveBroadcast", $"You've left the channel '{channelName}'.");
         }
 
-        public async Task SendMessage(string channel, string message)
+        public async Task SendMessage(string? channel, string? message)
         {
+            if (String.IsNullOrEmpty(channel) || String.IsNullOrEmpty(message))
+            {
+                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name and message (2) arguments required.");
+                return;
+            }
             User? u = null;
             foreach (var user in _connections){
                 if (user.Value.Contains(Context.ConnectionId))
                 {
-                    u = null; // ex
+                    u = _userService.GetByName(user.Key);
                     break;
                 }
             }
