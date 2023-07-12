@@ -17,9 +17,9 @@ namespace Chatty
             builder.Services.AddScoped<UserService>();
             builder.Services.AddSignalR(hubOptions =>
             {
-                hubOptions.AddFilter<AuthorizationFilter>();
+                hubOptions.AddFilter<AuthorizeUserFilter>();
             });
-            builder.Services.AddSingleton<AuthorizationFilter>();
+            builder.Services.AddSingleton<AuthorizeUserFilter>();
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();

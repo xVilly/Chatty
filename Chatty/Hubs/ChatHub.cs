@@ -57,13 +57,9 @@ namespace Chatty.Hubs
             Console.WriteLine($"Client {Context.ConnectionId} has disconnected. (user: {userName})");
         }
 
-        public async Task Identify(string? name, string? password)
+        [AuthorizeUser(RequiredPermission=5)]
+        public async Task Identify(string name, string password)
         {
-            if (String.IsNullOrEmpty(name) || String.IsNullOrEmpty(password))
-            {
-                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Name and Password (2) arguments required.");
-                return;
-            }
             User? user = _userService.GetByName(name);
             if (user == null)
                 await Clients.Client(Context.ConnectionId).SendAsync("Status", 1, "User not found.");
@@ -79,13 +75,8 @@ namespace Chatty.Hubs
             }
         }
 
-        public async Task JoinChannel(string? channelName)
+        public async Task JoinChannel(string channelName)
         {
-            if (String.IsNullOrEmpty(channelName))
-            {
-                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name (1) argument required.");
-                return;
-            }
             User? u = null;
             foreach (var user in _connections)
             {
@@ -109,13 +100,8 @@ namespace Chatty.Hubs
             await Clients.Group(channelName).SendAsync("ReceiveBroadcast", $"[!] {u.Name} has joined the channel.");
         }
 
-        public async Task LeaveChannel(string? channelName)
+        public async Task LeaveChannel(string channelName)
         {
-            if (String.IsNullOrEmpty(channelName))
-            {
-                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name (1) argument required.");
-                return;
-            }
             User? u = null;
             foreach (var user in _connections)
             {
@@ -137,13 +123,8 @@ namespace Chatty.Hubs
             await Clients.Client(Context.ConnectionId).SendAsync("ReceiveBroadcast", $"You've left the channel '{channelName}'.");
         }
 
-        public async Task SendMessage(string? channel, string? message)
+        public async Task SendMessage(string channel, string message)
         {
-            if (String.IsNullOrEmpty(channel) || String.IsNullOrEmpty(message))
-            {
-                await Clients.Client(Context.ConnectionId).SendAsync("Status", 0, "Channel name and message (2) arguments required.");
-                return;
-            }
             User? u = null;
             foreach (var user in _connections){
                 if (user.Value.Contains(Context.ConnectionId))

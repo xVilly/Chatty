@@ -4,12 +4,23 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace Chatty.Filters
 {
-    public class AuthorizationFilter : Attribute, IHubFilter
+    [AttributeUsage(AttributeTargets.Method)]
+    public class AuthorizeUser : Attribute
     {
-        public async ValueTask<object> InvokeMethodAsync(HubInvocationContext invocationContext,
-        Func<HubInvocationContext, ValueTask<object>> next)
+        public int RequiredPermission;
+    }
+    public class AuthorizeUserFilter : IHubFilter
+    {
+        public async ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocationContext,
+        Func<HubInvocationContext, ValueTask<object?>> next)
         {
-            Console.WriteLine("Authorized user");
+            var attribute = (AuthorizeUser?)Attribute.GetCustomAttribute(invocationContext.HubMethod,
+                typeof(AuthorizeUser));
+            Console.WriteLine(invocationContext.HubMethodArguments.Count);
+            if (attribute != null) {
+                Console.WriteLine($"Works! {attribute.RequiredPermission}");
+                return "Custom error message!";
+            }
             return await next(invocationContext);
         }
     }
